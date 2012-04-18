@@ -11,14 +11,9 @@
 console.log("node.js verion: " + process.version);
 console.log('Current directory: ' + process.cwd());
 
-var http = require('http');
-//var util = require('util');
-//var url = require('url');
-//var fs = require('fs');
-
 var GWC = require('./gwc.js');
 
-http.createServer(function(req, res){
+require('http').createServer(function(req, res){
 	GWC.route(req, res);
 }).listen(1337);
 console.log('Server running at http://0.0.0.0:1337/');

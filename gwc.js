@@ -3,8 +3,41 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
 		defaultNet: "gnutella2",
-		addDefaultURLs: false
+		addDefaultURLs: false,
+		defaultURLs: {
+			"gnutella" : [
+				"http://gwc.dietpac.com:8080/",
+				"http://gwc.glucolene.com:8080/",
+				"http://beacon.numberzero.org/gwc.php",
+				"http://www.5s7.com/g12cache/skulls.php",
+				"http://www.ak-electron.eu/Beacon2/gwc.php",
+				"http://gwebcache.ns1.net/",
+			], 
+			"gnutella2" : [
+				"http://htmlhell.com/",
+				"http://gwc2.wodi.org/skulls.php",
+				"http://cache.trillinux.org/g2/bazooka.php",
+				"http://silvers.zyns.com/gwc/dkac.php",
+				"http://dkac.trillinux.org/dkac/dkac.php",
+				"http://gwc.marksieklucki.com/skulls.php",
+				"http://gwc.dyndns.info:28960/gwc.php",
+				"http://cache3.leite.us/",
+				"http://gwebcache.ns1.net/",
+				"http://cache5.leite.us/",
+				"http://cache.ce3c.be/",
+				"http://cache2.leite.us/",
+				"http://karma.cloud.bishopston.net:33559/",           
+			]
+		}
 	};
+	try{
+		var settings_json = $fs.readFileSync('settings.json', 'utf-8');
+		var settings_temp = JSON.parse(settings_json);
+		if($_.isObject(settings_temp)){
+			$_.extend(settings, settings_temp);
+		}
+	}
+	catch(e){}
 	
 	var ip_store = {};
 	var url_store = {};
@@ -13,12 +46,48 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		url_store[settings.nets[n]] = new FixedLengthQueue(10);
 	}
 	
+	//TODO don't add is serialized urls are to be added below.
+	if('defaultURLs' in settings){
+		for(var net in settings['defaultURLs']){
+			for(var i in settings['defaultURLs'][net]){
+				addURL(settings['defaultURLs'][net][i], net);
+			}
+		}
+	}
+	
 	//load saved data
+	try{
+		var ip_store_json = $fs.readFileSync('data/ip_store.json', 'utf-8');
+		var ip_store_temp = JSON.parse(ip_store_json);
+		if($_.isObject(ip_store_temp)){
+			for(var net in ip_store_temp){
+				ip_store[net].fromJSON(ip_store_temp[net]);
+			}
+		}
+	}
+	catch(e){}
+	try{
+		var url_store_json = $fs.readFileSync('data/url_store.json', 'utf-8');
+		var url_store_temp = JSON.parse(url_store_json);
+		if($_.isObject(url_store_temp)){
+			for(var net in url_store_temp){
+				url_store[net].fromJSON(url_store_temp[net]);
+			}
+		}
+	}
+	catch(e){}
 	
 	//On exit...
 	process.on('exit', function(){
-		var ip_store_f = $fs.openSync('ip_store.json', 'w+');
+		var ip_store_f = $fs.openSync('data/ip_store.json', 'w+');
 		var w = $fs.writeSync(ip_store_f, JSON.stringify(ip_store));
+		
+		var url_store_f = $fs.openSync('data/url_store.json', 'w+');
+		var w = $fs.writeSync(url_store_f, JSON.stringify(url_store));
+		
+		var settings_f = $fs.openSync('settings.json', 'w+');
+		var w = $fs.writeSync(settings_f, JSON.stringify(settings));
+		
 		console.log("exiting...");
 	});
 	process.on('SIGINT', function(){
@@ -28,32 +97,6 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		process.exit(0);
 	});
 	//End on exit.
-
-	if(settings.addDefaultURLs){
-		if(settings.nets.indexOf('gnutella2')){
-			addURL("http://htmlhell.com/", 'gnutella2', url_store);
-			addURL("http://gwc2.wodi.org/skulls.php", 'gnutella2', url_store);
-			addURL("http://cache.trillinux.org/g2/bazooka.php", 'gnutella2', url_store);
-			addURL("http://silvers.zyns.com/gwc/dkac.php", 'gnutella2', url_store);
-			addURL("http://dkac.trillinux.org/dkac/dkac.php", 'gnutella2', url_store);
-			addURL("http://gwc.marksieklucki.com/skulls.php", 'gnutella2', url_store);
-			addURL("http://gwc.dyndns.info:28960/gwc.php", 'gnutella2', url_store);
-			addURL("http://cache3.leite.us/", 'gnutella2', url_store);
-			addURL("http://gwebcache.ns1.net/", 'gnutella2', url_store);
-			addURL("http://cache5.leite.us/", 'gnutella2', url_store);
-			addURL("http://cache.ce3c.be/", 'gnutella2', url_store);
-			addURL("http://cache2.leite.us/", 'gnutella2', url_store);
-			addURL("http://karma.cloud.bishopston.net:33559/", 'gnutella2', url_store);
-		}
-		if(settings.nets.indexOf('gnutella')){
-			addURL("http://gwc.dietpac.com:8080/", 'gnutella', url_store);
-			addURL("http://gwc.glucolene.com:8080/", 'gnutella', url_store);
-			addURL("http://beacon.numberzero.org/gwc.php", 'gnutella', url_store);
-			addURL("http://www.5s7.com/g12cache/skulls.php", 'gnutella', url_store);
-			addURL("http://www.ak-electron.eu/Beacon2/gwc.php", 'gnutella', url_store);
-			addURL("http://gwebcache.ns1.net/", 'gnutella', url_store);
-		}
-	}
 
 	//stats.clients['RAZA']['2.3.1.3'] = 1;
 	//stats.nets['gnutella2'] = 1;
