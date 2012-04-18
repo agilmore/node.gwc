@@ -9,6 +9,7 @@
  */
 
 console.log("node.js verion: " + process.version);
+console.log('Current directory: ' + process.cwd());
 
 var http = require('http');
 //var util = require('util');

@@ -1,8 +1,9 @@
-module.exports = GWC = (function($_, $url, $http){
+module.exports = GWC = (function($_, $url, $http, $fs){
 	
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
-		defaultNet: "gnutella2"
+		defaultNet: "gnutella2",
+		addDefaultURLs: false
 	};
 	
 	var ip_store = {};
@@ -12,42 +13,12 @@ module.exports = GWC = (function($_, $url, $http){
 		url_store[settings.nets[n]] = new FixedLengthQueue(10);
 	}
 	
-	console.log(addURL);
-
-	if(settings.nets.indexOf('gnutella2')){
-		addURL("http://htmlhell.com/", 'gnutella2', url_store);
-		addURL("http://gwc2.wodi.org/skulls.php", 'gnutella2', url_store);
-		addURL("http://cache.trillinux.org/g2/bazooka.php", 'gnutella2', url_store);
-		addURL("http://silvers.zyns.com/gwc/dkac.php", 'gnutella2', url_store);
-		addURL("http://dkac.trillinux.org/dkac/dkac.php", 'gnutella2', url_store);
-		addURL("http://gwc.marksieklucki.com/skulls.php", 'gnutella2', url_store);
-		addURL("http://gwc.dyndns.info:28960/gwc.php", 'gnutella2', url_store);
-		addURL("http://cache3.leite.us/", 'gnutella2', url_store);
-		addURL("http://gwebcache.ns1.net/", 'gnutella2', url_store);
-		addURL("http://cache5.leite.us/", 'gnutella2', url_store);
-		addURL("http://cache.ce3c.be/", 'gnutella2', url_store);
-		addURL("http://cache2.leite.us/", 'gnutella2', url_store);
-		addURL("http://karma.cloud.bishopston.net:33559/", 'gnutella2', url_store);
-	}
-	if(settings.nets.indexOf('gnutella')){
-		addURL("http://gwc.dietpac.com:8080/", 'gnutella', url_store);
-		addURL("http://gwc.glucolene.com:8080/", 'gnutella', url_store);
-		addURL("http://beacon.numberzero.org/gwc.php", 'gnutella', url_store);
-		addURL("http://www.5s7.com/g12cache/skulls.php", 'gnutella', url_store);
-		addURL("http://www.ak-electron.eu/Beacon2/gwc.php", 'gnutella', url_store);
-		addURL("http://gwebcache.ns1.net/", 'gnutella', url_store);
-	}
-
-	//stats.clients['RAZA']['2.3.1.3'] = 1;
-	//stats.nets['gnutella2'] = 1;
-	var stats = {
-		clients: {},
-		nets: {},
-	};
-
+	//load saved data
+	
+	//On exit...
 	process.on('exit', function(){
-		//var ip_store_f = fs.openSync('ip_store.json', 'a+');
-		//var w = fs.writeSync(ip_store_f, JSON.stringify(ip_store));
+		var ip_store_f = $fs.openSync('ip_store.json', 'w+');
+		var w = $fs.writeSync(ip_store_f, JSON.stringify(ip_store));
 		console.log("exiting...");
 	});
 	process.on('SIGINT', function(){
@@ -56,6 +27,40 @@ module.exports = GWC = (function($_, $url, $http){
 	process.on('SIGTERM', function(){
 		process.exit(0);
 	});
+	//End on exit.
+
+	if(settings.addDefaultURLs){
+		if(settings.nets.indexOf('gnutella2')){
+			addURL("http://htmlhell.com/", 'gnutella2', url_store);
+			addURL("http://gwc2.wodi.org/skulls.php", 'gnutella2', url_store);
+			addURL("http://cache.trillinux.org/g2/bazooka.php", 'gnutella2', url_store);
+			addURL("http://silvers.zyns.com/gwc/dkac.php", 'gnutella2', url_store);
+			addURL("http://dkac.trillinux.org/dkac/dkac.php", 'gnutella2', url_store);
+			addURL("http://gwc.marksieklucki.com/skulls.php", 'gnutella2', url_store);
+			addURL("http://gwc.dyndns.info:28960/gwc.php", 'gnutella2', url_store);
+			addURL("http://cache3.leite.us/", 'gnutella2', url_store);
+			addURL("http://gwebcache.ns1.net/", 'gnutella2', url_store);
+			addURL("http://cache5.leite.us/", 'gnutella2', url_store);
+			addURL("http://cache.ce3c.be/", 'gnutella2', url_store);
+			addURL("http://cache2.leite.us/", 'gnutella2', url_store);
+			addURL("http://karma.cloud.bishopston.net:33559/", 'gnutella2', url_store);
+		}
+		if(settings.nets.indexOf('gnutella')){
+			addURL("http://gwc.dietpac.com:8080/", 'gnutella', url_store);
+			addURL("http://gwc.glucolene.com:8080/", 'gnutella', url_store);
+			addURL("http://beacon.numberzero.org/gwc.php", 'gnutella', url_store);
+			addURL("http://www.5s7.com/g12cache/skulls.php", 'gnutella', url_store);
+			addURL("http://www.ak-electron.eu/Beacon2/gwc.php", 'gnutella', url_store);
+			addURL("http://gwebcache.ns1.net/", 'gnutella', url_store);
+		}
+	}
+
+	//stats.clients['RAZA']['2.3.1.3'] = 1;
+	//stats.nets['gnutella2'] = 1;
+	var stats = {
+		clients: {},
+		nets: {},
+	};
 	
 	function urlNormalise(url){
 		url = url.toLowerCase();
@@ -265,7 +270,7 @@ module.exports = GWC = (function($_, $url, $http){
 			}
 		},
 	};
-}(require('./underscore.js'), require('url'), require('http')));
+}(require('./underscore.js'), require('url'), require('http'), require('fs')));
 
 function FixedLengthQueue(len){
 	var queue = [];
@@ -292,5 +297,13 @@ function FixedLengthQueue(len){
 
 	this.toJSON = function(){
 		return JSON.stringify(queue);
+	}
+	
+	this.fromJSON = function(json){
+		var utils = require('utils');
+		temp = JSON.parse(json);
+		if(utils.isArray(temp)){
+			queue = temp;
+		}
 	}
 }
