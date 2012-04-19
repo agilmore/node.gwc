@@ -1,4 +1,5 @@
 #!/bin/bash
+svn update
 if [ -f node.gwc.pid ]; then
 	kill `cat ./node.gwc.pid`
 	rm node.gwc.pid
