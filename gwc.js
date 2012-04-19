@@ -130,7 +130,6 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		$_.extend(options, {
 			headers: {'User-Agent': 'node.gwc'}
 		});
-		var extra = '?ping=1&multi=1&client=NODEGWC&version=0.1&cache=1';
 		if(!('path' in options)){
 			options.path = options.pathname + options.search;
 		}
@@ -190,12 +189,14 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 
 	return {
 		route: function(req, res){
+			console.log(req.socket.remoteAddress + " [" + (new Date()).toISOString() + "] " + req.method + " " + req.url + " HTTP/" + req.httpVersion);
+			
 			var toreturn = [];
 			var args = $url.parse(req.url, true).query;
 			if(args == undefined || $_.isEmpty(args)){
 				res.writeHead(200, {'Content-Type': 'text/html'});
 				res.end(indexPage(this.ping().software));
-				console.log("INDEX: %s", req.socket.remoteAddress);
+				//console.log("INDEX: %s", req.socket.remoteAddress);
 				return;
 			}
 			res.writeHead(200, {'Content-Type': 'text/plain'});
@@ -220,18 +221,18 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				if(args.ip != undefined && args.ip.split(':')[0] == req.socket.remoteAddress){
 					if(this.update(net, args.ip, args.url)){
 						toreturn.push(["I", "update", "OK"]);
-						console.log("UPDATE: %s OK", args.ip);
+						//console.log("UPDATE: %s OK", args.ip);
 					}
 				}
 				else{
 					toreturn.push(["I", "update", "WARNING", "Rejected IP"]);;
-					console.log("UPDATE: %s WARNING", args.ip);
+					//console.log("UPDATE: %s WARNING", args.ip);
 				}
 			}
 	
 			if(args.get != undefined){
 				var data = this.get(net, req.socket.remoteAddress);
-				console.log("GET: %s", req.socket.remoteAddress);
+				//console.log("GET: %s", req.socket.remoteAddress);
 				for(i in data.hosts){
 					toreturn.push(["H", data.hosts[i][0], Date.now() - data.hosts[i][1]]);
 				}
@@ -243,7 +244,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			if(args.ping != undefined){
 				var ping = this.ping();
 				toreturn.push(["I", "pong", ping.software.name + ' ' + ping.software.version, ping.networks.join("-")]);
-				console.log("PING: %s", req.socket.remoteAddress);
+				//console.log("PING: %s", req.socket.remoteAddress);
 			}
 	
 			/*
