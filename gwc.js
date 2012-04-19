@@ -193,7 +193,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 		}
 		s += "<dd>" + maxi + "</dd>";
-		s += "<p>Uptime: " + process.uptime() + s"</p>";
+		s += "<p>Uptime: " + process.uptime() + "s</p>";
 		s += "</body>\n";
 		s += "</html>";
 		return s;
