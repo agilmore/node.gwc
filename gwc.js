@@ -50,7 +50,10 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	if('defaultURLs' in settings){
 		for(var net in settings['defaultURLs']){
 			for(var i in settings['defaultURLs'][net]){
-				addURL(settings['defaultURLs'][net][i], net);
+				try{
+					addURL(settings['defaultURLs'][net][i], net);
+				}
+				catch(e){console.error(e);}
 			}
 		}
 	}
