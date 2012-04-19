@@ -3,7 +3,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
 		defaultNet: "gnutella2",
-		addDefaultURLs: false,/*
+		addDefaultURLs: false,
 		defaultURLs: {
 			"gnutella" : [
 				"http://gwc.dietpac.com:8080/",
@@ -28,7 +28,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				"http://cache2.leite.us/",
 				"http://karma.cloud.bishopston.net:33559/",           
 			]
-		}*/
+		}
 	};
 	try{
 		var settings_json = $fs.readFileSync('settings.json', 'utf-8');
@@ -151,16 +151,13 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				}
 				else{
 					console.log("URL: Returned error (" + url + ")");
-					throw "URL: Returned error (" + url + ")";
 				}
 			}).on('error', function(error){
 				console.error("URL: " + url + " FAILED: " + error.message);
-				throw "URL: " + url + " FAILED: " + error.message;
 			});
 		});
 		req.on('error', function(error){
 			console.error("URL: " + url + " FAILED: " + error.message);
-			throw "URL: " + url + " FAILED: " + error.message;
 		});
 	}
 	
