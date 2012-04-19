@@ -43,7 +43,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	var url_store = {};
 	for(n in settings.nets){
 		ip_store[settings.nets[n]] = new FixedLengthQueue(30);
-		url_store[settings.nets[n]] = new FixedLengthQueue(10);
+		url_store[settings.nets[n]] = new FixedLengthQueue(15);
 	}
 	
 	//TODO don't add is serialized urls are to be added below.
