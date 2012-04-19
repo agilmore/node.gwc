@@ -11,6 +11,11 @@
 console.log("node.js verion: " + process.version);
 console.log('Current directory: ' + process.cwd());
 
+process.on('uncaughtException', function(err) {
+	console.dir(err);
+	process.exit(1);
+});
+
 var GWC = require('./gwc.js');
 
 require('http').createServer(function(req, res){
