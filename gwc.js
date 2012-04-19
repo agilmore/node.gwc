@@ -3,7 +3,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
 		defaultNet: "gnutella2",
-		addDefaultURLs: false,
+		addDefaultURLs: false,/*
 		defaultURLs: {
 			"gnutella" : [
 				"http://gwc.dietpac.com:8080/",
@@ -28,7 +28,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				"http://cache2.leite.us/",
 				"http://karma.cloud.bishopston.net:33559/",           
 			]
-		}
+		}*/
 	};
 	try{
 		var settings_json = $fs.readFileSync('settings.json', 'utf-8');
@@ -60,12 +60,12 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		var ip_store_json = $fs.readFileSync('data/ip_store.json', 'utf-8');
 		var ip_store_temp = JSON.parse(ip_store_json);
 		if($_.isObject(ip_store_temp)){
-			for(var net in ip_store_temp){
-				ip_store[net].fromJSON(ip_store_temp[net]);
+			for(var n in ip_store_temp){
+				ip_store[n].fromJSON(ip_store_temp[n]);
 			}
 		}
 	}
-	catch(e){}
+	catch(e){console.error(e);}
 	try{
 		var url_store_json = $fs.readFileSync('data/url_store.json', 'utf-8');
 		var url_store_temp = JSON.parse(url_store_json);
@@ -75,7 +75,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 		}
 	}
-	catch(e){}
+	catch(e){console.error(e);}
 	
 	//On exit...
 	process.on('exit', function(){
@@ -125,6 +125,8 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 
 	function addURL(url, net){
 		url = urlNormalise(url);
+		
+		if(settings.nets.indexOf(net) === -1) throw "Not a known network (" + net + ")";
 
 		var options = $url.parse(url + '?ping=1&multi=1&client=NODEGWC&version=0.1&cache=1&net=gnutella2');
 		$_.extend(options, {
@@ -134,30 +136,40 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			options.path = options.pathname + options.search;
 		}
 
-		try{
-			var req = $http.get(options, function(res) {
-				res.on('data', function (chunk) {
-					if(	chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
-						chunk.toString().toLowerCase().indexOf('pong') === 0
-					){
-						if(!url_store[net].exists(url)){
-							url_store[net].push(url);
-							console.log("URL: checked and working (" + url + ")");
-						}
+		var req = $http.get(options, function(res) {
+			res.on('data', function (chunk) {
+				if(	chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
+					chunk.toString().toLowerCase().indexOf('pong') === 0
+				){
+					if(!url_store[net].exists(url)){
+						url_store[net].push(url);
+						console.log("URL: checked and working (" + url + ")");
 					}
-					else{
-						console.log("URL: Returned error (" + url + ")");
-					}
-				}).on('error', function(error){
-					console.log("URL: " + url + " FAILED: " + error.message);
-				});
+				}
+				else{
+					console.log("URL: Returned error (" + url + ")");
+					throw "URL: Returned error (" + url + ")";
+				}
+			}).on('error', function(error){
+				console.error("URL: " + url + " FAILED: " + error.message);
+				throw "URL: " + url + " FAILED: " + error.message;
 			});
-			req.on('error', function(error){
-				console.log("URL: " + url + " FAILED: " + error.message);
-			});
-		}
-		catch(e){
-			console.log("Exception:" + e);
+		});
+		req.on('error', function(error){
+			console.error("URL: " + url + " FAILED: " + error.message);
+			throw "URL: " + url + " FAILED: " + error.message;
+		});
+	}
+	
+	function addIP(ip, net){
+		ip = ip.toString();
+		if(ip.search("^[0-9.]+$") == -1) throw "IP invalid (" + ip + ")";
+		if(settings.nets.indexOf(net) == -1) throw "Not a known network (" + net + ")";
+			
+		if(!ip_store[net].exists(ip, function(e, o){
+			return e[0] == o;
+		})){
+			ip_store[net].push([ip, Date.now()]);
 		}
 	}
 
@@ -181,7 +193,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 		}
 		s += "<dd>" + maxi + "</dd>";
-		s += "<p>Uptime: " + process.uptime() + "</p>";
+		s += "<p>Uptime: " + process.uptime() + s"</p>";
 		s += "</body>\n";
 		s += "</html>";
 		return s;
@@ -213,15 +225,38 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				};
 	
 				for(var i = 0; i < 10; i++){
-					ip_store[net].push([ran_ip(), Date.now()]);
+					addIP(ran_ip(), net);
 				}
+			}
+			
+			if(args.debug != undefined && args.debug == 'full'){
+				var util = require('util');
+				res.write("=================DEBUG=================\n");
+				res.write("ip_store:\n");
+				for(var n in ip_store){
+					res.write(n + "\n");
+					res.write(util.inspect(ip_store[n].getArray()));
+					res.write("\n");
+				}
+				res.write("\nurl_store:\n");
+				for(var n in url_store){
+					res.write(n + "\n");
+					res.write(util.inspect(url_store[n].getArray()));
+					res.write("\n");
+				}
+				res.write("\nsettings:\n");
+				res.write(util.inspect(settings));
+				res.write("\n=======================================\n\n");
 			}
 	
 			if(args.update != undefined){
 				if(args.ip != undefined && args.ip.split(':')[0] == req.socket.remoteAddress){
-					if(this.update(net, args.ip, args.url)){
+					try{
+						this.update(net, args.ip, args.url);
 						toreturn.push(["I", "update", "OK"]);
-						//console.log("UPDATE: %s OK", args.ip);
+					}
+					catch(e){ //TODO: more specific
+						toreturn.push(["I", "update", "WARNING", "Rejected URL", e]);
 					}
 				}
 				else{
@@ -231,13 +266,18 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 	
 			if(args.get != undefined){
-				var data = this.get(net, req.socket.remoteAddress);
-				//console.log("GET: %s", req.socket.remoteAddress);
-				for(i in data.hosts){
-					toreturn.push(["H", data.hosts[i][0], Date.now() - data.hosts[i][1]]);
+				try{
+					var data = this.get(net, req.socket.remoteAddress);
+					//console.log("GET: %s", req.socket.remoteAddress);
+					for(i in data.hosts){
+						toreturn.push(["H", data.hosts[i][0], Date.now() - data.hosts[i][1]]);
+					}
+					for(i in data.urls){
+						toreturn.push(["U", data.urls[i]]);
+					}
 				}
-				for(i in data.urls){
-					toreturn.push(["U", data.urls[i]]);
+				catch(e){
+					toreturn.push(["I", "WARNING", e]);
 				}
 			}
 	
@@ -266,41 +306,30 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				if(stats.nets[args.net] == undefined) stats.nets[args.net] = 1;
 				else stats.nets[args.net]++;
 			}
-	
+
 			if(toreturn.length == 0){
 				toreturn.push(["I", "nothing"]);
 			}
-	
+
 			var r = "";
 			for(i in toreturn){
 				r += toreturn[i].join("|") + "\n";
 			}
-	
+
 			res.end(r);
 		},
-	
+
 		update: function(net, ip, url){
 			url = url || null;
-	
-			if(!ip_store[net].exists(ip, function(e, o){
-				return e[0] == o;
-			})){
-				ip_store[net].push([ip, Date.now()]);
-			}
-	
-			addURL(url);
-	
-			return true;
+
+			addIP(ip, net);
+
+			addURL(url, net);
 		},
 
 		get: function(net, ip){
-	
-			if(!ip_store[net].exists(ip, function(e, o){
-				return e[0] == o;
-			})){
-				ip_store[net].push([ip, Date.now()]);
-			}
-	
+			addIP(ip, net);
+
 			return {
 				hosts:	ip_store[net].getArray(),
 				urls:	url_store[net].getArray()
@@ -344,9 +373,9 @@ function FixedLengthQueue(len){
 	}
 	
 	this.fromJSON = function(json){
-		var utils = require('utils');
+		var util = require('util');
 		temp = JSON.parse(json);
-		if(utils.isArray(temp)){
+		if(util.isArray(temp)){
 			queue = temp;
 		}
 	}
