@@ -253,18 +253,30 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 	
 			if(args.update != undefined){
-				if(args.ip != undefined && args.ip.split(':')[0] == req.socket.remoteAddress){
-					try{
-						this.update(net, args.ip, args.url);
-						toreturn.push(["I", "update", "OK"]);
+				if(args.ip != undefined){
+					if(args.ip.split(':')[0] == req.socket.remoteAddress){
+						try{
+							addIP(args.ip, net);
+							//this.update(net, args.ip, args.url);
+							toreturn.push(["I", "update", "OK"]);
+						}
+						catch(e){ //TODO: more specific
+							toreturn.push(["I", "update", "WARNING", "Rejected IP", e]);
+						}
 					}
-					catch(e){ //TODO: more specific
-						toreturn.push(["I", "update", "WARNING", "Rejected URL", e]);
+					else{
+						toreturn.push(["I", "update", "WARNING", "Rejected IP"]);
 					}
 				}
-				else{
-					toreturn.push(["I", "update", "WARNING", "Rejected IP"]);
+				
+				try{
+					addURL(args.url, net);
+					toreturn.push(["I", "update", "OK"]);
 				}
+				catch(e){
+					toreturn.push(["I", "update", "WARNING", "Rejected URL", e]);
+				}
+				
 			}
 	
 			if(args.get != undefined){
