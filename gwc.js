@@ -146,8 +146,10 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				if(	chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
 					chunk.toString().toLowerCase().indexOf('pong') === 0
 				){
-					if(!url_store[net].exists(url)){
-						url_store[net].push(url);
+					if(!url_store[net].exists(url, function(e, o){
+						return e[0] == o;
+					})){
+						url_store[net].push([url, Date.now()]);
 						console.log("URL: checked and working (" + url + ")");
 					}
 				}
@@ -272,7 +274,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 						toreturn.push(["H", data.hosts[i][0], Date.now() - data.hosts[i][1]]);
 					}
 					for(i in data.urls){
-						toreturn.push(["U", data.urls[i]]);
+						toreturn.push(["U", data.urls[i][0], Date.now() - data.urls[i][1]]);
 					}
 				}
 				catch(e){
