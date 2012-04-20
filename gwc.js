@@ -214,9 +214,10 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				remote_ip = req.socket.remoteAddress || req.connection.remoteAddress || req.connection.socket.remoteAddress || null;
 			}
 			catch(e){}
-			if(remote_ip == null){
+			if(!remote_ip){
 				console.error("Undefined IP");
 				console.dir(req);
+				return;
 			}
 			
 			console.log(remote_ip + " [" + (new Date()).toISOString() + "] " + req.method + " " + req.url + " HTTP/" + req.httpVersion);
