@@ -1,8 +1,8 @@
 module.exports = GWC = (function($_, $url, $http, $fs){
 	
-	this.NAME = 'node.gwc';
-	this.VERSION = '0.1';
-
+	NAME = 'node.gwc';
+	VERSION = '0.1';
+	
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
 		defaultNet: "gnutella2",
@@ -283,7 +283,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 	
 			if(args.ping != undefined){
-				toreturn.push(["I", "pong", this.NAME + ' ' + this.VERSION, settings.nets.join("-")]);
+				toreturn.push(["I", "pong", NAME + ' ' + VERSION, settings.nets.join("-")]);
 			}
 	
 			/*
