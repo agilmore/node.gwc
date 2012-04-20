@@ -96,10 +96,10 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		console.log("exiting...");
 	});
 	process.on('SIGINT', function(){
-		process.exit(0);
+		process.nextTick(process.exit);
 	});
 	process.on('SIGTERM', function(){
-		process.exit(0);
+		process.nextTick(process.exit);
 	});
 	//End on exit.
 
@@ -197,7 +197,9 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 		}
 		s += "<dd>" + maxi + "</dd>";
-		s += "<p>Uptime: " + process.uptime() + "s</p>";
+		s += "<pre>Uptime: " + process.uptime().toFixed(2) + "s\n";
+		s += "Memory Usage: " + (process.memoryUsage())['rss'] / 1024 / 1024 + "MB\n";
+		s += "</pre>";
 		s += "</body>\n";
 		s += "</html>";
 		return s;
@@ -205,7 +207,15 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 
 	return {
 		route: function(req, res){
-			console.log(req.socket.remoteAddress + " [" + (new Date()).toISOString() + "] " + req.method + " " + req.url + " HTTP/" + req.httpVersion);
+			
+			//nonsense:
+			var remote_ip = req.socket.remoteAddress || req.connection.remoteAddress || req.connection.socket.remoteAddress;
+			if(remote_ip == undefined){
+				console.error("Undefined IP");
+				console.dir(req);
+			}
+			
+			console.log(remote_ip + " [" + (new Date()).toISOString() + "] " + req.method + " " + req.url + " HTTP/" + req.httpVersion);
 			
 			var toreturn = [];
 			var args = $url.parse(req.url, true).query;
@@ -254,7 +264,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	
 			if(args.update != undefined){
 				if(args.ip != undefined){
-					if(args.ip.split(':')[0] == req.socket.remoteAddress){
+					if(args.ip.split(':')[0] == remote_ip){
 						try{
 							addIP(args.ip, net);
 							//this.update(net, args.ip, args.url);
@@ -281,7 +291,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	
 			if(args.get != undefined){
 				try{
-					var data = this.get(net, req.socket.remoteAddress);
+					var data = this.get(net, remote_ip);
 					for(i in data.hosts){
 						toreturn.push(["H", data.hosts[i][0], Date.now() - data.hosts[i][1]]);
 					}
