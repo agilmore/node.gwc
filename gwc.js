@@ -208,7 +208,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	return {
 		route: function(req, res){
 			
-			//nonsense:
+			//nonsense: sometimes remoteAddress is undefined!
 			var remote_ip = null;
 			try{
 				remote_ip = req.socket.remoteAddress || req.connection.remoteAddress || req.connection.socket.remoteAddress || null;
@@ -216,7 +216,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			catch(e){}
 			if(!remote_ip){
 				console.error("Undefined IP");
-				console.dir(req);
+				//console.dir(req);
 				return;
 			}
 			
