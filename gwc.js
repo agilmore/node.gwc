@@ -1,9 +1,11 @@
 module.exports = GWC = (function($_, $url, $http, $fs){
 	
+	this.NAME = 'node.gwc';
+	this.VERSION = '0.1';
+
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
 		defaultNet: "gnutella2",
-		addDefaultURLs: false,
 		defaultURLs: {
 			"gnutella" : [
 				"http://gwc.dietpac.com:8080/",
@@ -12,7 +14,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				"http://www.5s7.com/g12cache/skulls.php",
 				"http://www.ak-electron.eu/Beacon2/gwc.php",
 				"http://gwebcache.ns1.net/",
-			], 
+			],
 			"gnutella2" : [
 				"http://htmlhell.com/",
 				"http://gwc2.wodi.org/skulls.php",
@@ -208,7 +210,6 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			if(args == undefined || $_.isEmpty(args)){
 				res.writeHead(200, {'Content-Type': 'text/html'});
 				res.end(indexPage(this.ping().software));
-				//console.log("INDEX: %s", req.socket.remoteAddress);
 				return;
 			}
 			res.writeHead(200, {'Content-Type': 'text/plain'});
@@ -260,15 +261,13 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 					}
 				}
 				else{
-					toreturn.push(["I", "update", "WARNING", "Rejected IP"]);;
-					//console.log("UPDATE: %s WARNING", args.ip);
+					toreturn.push(["I", "update", "WARNING", "Rejected IP"]);
 				}
 			}
 	
 			if(args.get != undefined){
 				try{
 					var data = this.get(net, req.socket.remoteAddress);
-					//console.log("GET: %s", req.socket.remoteAddress);
 					for(i in data.hosts){
 						toreturn.push(["H", data.hosts[i][0], Date.now() - data.hosts[i][1]]);
 					}
@@ -282,9 +281,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 	
 			if(args.ping != undefined){
-				var ping = this.ping();
-				toreturn.push(["I", "pong", ping.software.name + ' ' + ping.software.version, ping.networks.join("-")]);
-				//console.log("PING: %s", req.socket.remoteAddress);
+				toreturn.push(["I", "pong", this.NAME + ' ' + this.VERSION, settings.nets.join("-")]);
 			}
 	
 			/*
@@ -336,6 +333,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			};
 		},
 
+		// @Deprecated
 		ping: function(){
 			return {
 				software: {'name':'node.gwc', 'version':'0.1'},
