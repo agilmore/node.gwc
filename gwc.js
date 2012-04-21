@@ -6,6 +6,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
 		defaultNet: "gnutella2",
+		/*
 		defaultURLs: {
 			"gnutella" : [
 				"http://gwc.dietpac.com:8080/",
@@ -31,6 +32,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				"http://karma.cloud.bishopston.net:33559/",           
 			]
 		}
+		*/
 	};
 	try{
 		var settings_json = $fs.readFileSync('settings.json', 'utf-8');
@@ -127,6 +129,10 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		}
 		return settings.defaultNet;
 	}
+	
+	function _fix_length_queue_entry_exists(e, o){
+		return e[0] == o;
+	}
 
 	function addURL(url, net){
 		url = urlNormalise(url);
@@ -141,38 +147,44 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			options.path = options.pathname + options.search;
 		}
 
-		var req = $http.get(options, function(res) {
-			res.on('data', function (chunk) {
-				if(	chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
-					chunk.toString().toLowerCase().indexOf('pong') === 0
-				){
-					if(!url_store[net].exists(url, function(e, o){
-						return e[0] == o;
-					})){
+		if(!url_store[net].exists(url, _fix_length_queue_entry_exists)){
+			var req = $http.get(options, function(res) {
+				res.on('data', function (chunk) {
+					if(	chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
+						chunk.toString().toLowerCase().indexOf('pong') === 0
+					){
 						url_store[net].push([url, getDateSeconds()]);
 						console.log("URL: checked and working (" + url + ")");
+						
+						setTimeout(addURL, ((1000*60*60*24) + (1000*60*10)), url, net);
 					}
-				}
-				else{
-					console.log("URL: Returned error (" + url + ")");
-				}
-			}).on('error', function(error){
+					else{
+						console.error("URL: Returned error (" + url + ")");
+						console.error(chunk.toString().toLowerCase());
+					}
+				}).on('error', function(error){
+					console.error("URL: " + url + " FAILED: " + error.message);
+				});
+			});
+			req.on('error', function(error){
 				console.error("URL: " + url + " FAILED: " + error.message);
 			});
-		});
-		req.on('error', function(error){
-			console.error("URL: " + url + " FAILED: " + error.message);
-		});
+		}
+		else{
+			//console.dir(url_store[net].get(url, _fix_length_queue_entry_exists));
+			if(getDateSeconds() - url_store[net].get(url, _fix_length_queue_entry_exists)[1] > (60*60*24)){
+				url_store[net].remove(url, _fix_length_queue_entry_exists);
+				process.nextTick(function(){addURL(url, net);});
+			}
+		}
 	}
 	
 	function addIP(ip, net){
 		ip = ip.toString();
-		if(ip.search("^[0-9.]+$") == -1) throw "IP invalid (" + ip + ")";
+		if(ip.search("^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}$") == -1) throw "IP invalid (" + ip + ")";
 		if(settings.nets.indexOf(net) == -1) throw "Not a known network (" + net + ")";
 			
-		if(!ip_store[net].exists(ip, function(e, o){
-			return e[0] == o;
-		})){
+		if(!ip_store[net].exists(ip, _fix_length_queue_entry_exists)){
 			ip_store[net].push([ip, getDateSeconds()]);
 		}
 	}
@@ -211,7 +223,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 
 	return {
 		route: function(req, res){
-			
+
 			//nonsense: sometimes remoteAddress is undefined!
 			var remote_ip = null;
 			try{
@@ -223,9 +235,11 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				//console.dir(req);
 				return;
 			}
-			
+
+			res.setHeader('X-Remote-IP', remote_ip);
+
 			console.log(remote_ip + " [" + (new Date()).toISOString() + "] " + req.method + " " + req.url + " HTTP/" + req.httpVersion);
-			
+
 			var toreturn = [];
 			var args = $url.parse(req.url, true).query;
 			if(args == undefined || $_.isEmpty(args)){
@@ -234,23 +248,46 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				return;
 			}
 			res.writeHead(200, {'Content-Type': 'text/plain'});
-	
+
 			var net = getNet(args);
-	
+
 			if(args.test != undefined){
+				var flq = new FixedLengthQueue(10);
+				for(var i = 0; i < 10; i++){
+					flq.push([i+'', Date.now()]);
+				}
+				
+				flq.remove("5", _fix_length_queue_entry_exists);
+				
+				toreturn.push([require('util').inspect(flq.getArray())]);
+				
+				flq.push(["11", Date.now()]);
+				
+				toreturn.push([require('util').inspect(flq.getArray())]);
+				
+				flq.remove("2", _fix_length_queue_entry_exists);
+				
+				toreturn.push([require('util').inspect(flq.getArray())]);
+			}
+
+			if(args.pollute != undefined){
+				var pollute_n = args.pullute ? parseInt(args.pullute) : 5;
 				var ran_ip = function(){
 					var parts = [];
-					for(var i = 0; i < 4; i++){
+					for(var i = 0; i < pollute_n; i++){
 						parts.push(Math.floor(Math.random() * 255) + 1);
 					}
 					return parts.join(".");
 				};
 	
 				for(var i = 0; i < 10; i++){
-					addIP(ran_ip(), net);
+					try{
+						addIP(ran_ip() + ':' + (Math.floor(Math.random() * 65000) + 1024), net);
+					}
+					catch(e){}
 				}
 			}
-			
+
 			if(args.debug != undefined && args.debug == 'full'){
 				var util = require('util');
 				res.write("=================DEBUG=================\n");
@@ -270,7 +307,11 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				res.write(util.inspect(settings));
 				res.write("\n=======================================\n\n");
 			}
-	
+
+			if(args.ping != undefined){
+				toreturn.push(["I", "pong", NAME + ' ' + VERSION, settings.nets.join("-")]);
+			}
+
 			if(args.update != undefined){
 				if(args.ip != undefined){
 					if(args.ip.split(':')[0] == remote_ip){
@@ -297,7 +338,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				}
 				
 			}
-	
+
 			if(args.get != undefined){
 				try{
 					var data = this.get(net, remote_ip);
@@ -311,10 +352,6 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				catch(e){
 					toreturn.push(["I", "WARNING", e]);
 				}
-			}
-	
-			if(args.ping != undefined){
-				toreturn.push(["I", "pong", NAME + ' ' + VERSION, settings.nets.join("-")]);
 			}
 	
 			/*
@@ -358,7 +395,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		},
 
 		get: function(net, ip){
-			addIP(ip, net);
+			//addIP(ip, net);
 
 			return {
 				hosts:	ip_store[net].getArray(),
@@ -385,6 +422,15 @@ function FixedLengthQueue(len){
 		}
 		queue.push(o);
 	}
+	
+	this.get = function(o, compareFunc){
+		if(compareFunc == undefined){
+			compareFunc = function(e, o){
+				return e == o;
+			}
+		}
+		return (queue.filter(function(e){ return compareFunc(e, o); }))[0];
+	}
 
 	this.exists = function(o, compareFunc){
 		if(compareFunc == undefined){
@@ -393,6 +439,15 @@ function FixedLengthQueue(len){
 			}
 		}
 		return queue.some(function(e){ return compareFunc(e, o); });
+	}
+	
+	this.remove = function(o, compareFunc){
+		if(compareFunc == undefined){
+			compareFunc = function(e, o){
+				return e == o;
+			}
+		}
+		queue = queue.filter(function(v, i){ return !compareFunc(v, o); });
 	}
 	
 	this.getArray = function(){

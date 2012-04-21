@@ -3,9 +3,10 @@
  */
 /*
  * @todo
- * Implement spec 1
+ * Implement spec 1?
  * Implement spec xml?
- * Abstract adding to url store and test url (connect)
+ * Implement udp gwc.
+ * Remove underscore dependancy
  */
 
 console.log("node.js verion: " + process.version);
