@@ -149,7 +149,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 					if(!url_store[net].exists(url, function(e, o){
 						return e[0] == o;
 					})){
-						url_store[net].push([url, Date.now()]);
+						url_store[net].push([url, getDateSeconds()]);
 						console.log("URL: checked and working (" + url + ")");
 					}
 				}
@@ -173,7 +173,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		if(!ip_store[net].exists(ip, function(e, o){
 			return e[0] == o;
 		})){
-			ip_store[net].push([ip, Date.now()]);
+			ip_store[net].push([ip, getDateSeconds()]);
 		}
 	}
 
@@ -203,6 +203,10 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		s += "</body>\n";
 		s += "</html>";
 		return s;
+	}
+	
+	function getDateSeconds(){
+		return Math.round(Date.now() / 1000);
 	}
 
 	return {
@@ -298,10 +302,10 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				try{
 					var data = this.get(net, remote_ip);
 					for(i in data.hosts){
-						toreturn.push(["H", data.hosts[i][0], Date.now() - data.hosts[i][1]]);
+						toreturn.push(["H", data.hosts[i][0], getDateSeconds() - data.hosts[i][1]]);
 					}
 					for(i in data.urls){
-						toreturn.push(["U", data.urls[i][0], Date.now() - data.urls[i][1]]);
+						toreturn.push(["U", data.urls[i][0], getDateSeconds() - data.urls[i][1]]);
 					}
 				}
 				catch(e){
