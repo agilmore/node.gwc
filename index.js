@@ -8,6 +8,7 @@
  * Implement udp gwc.
  * Remove underscore dependancy
  * Extend stats (uptime not including restarts, total requests)
+ * Implement IP banning.
  */
 
 console.log("node.js verion: " + process.version);

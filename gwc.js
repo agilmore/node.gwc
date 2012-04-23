@@ -5,6 +5,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
+		myURL: 'http://gwctest.zapto.org:1337/',
 		defaultNet: "gnutella2",
 		defaultURLs: {
 			"gnutella" : [
@@ -140,6 +141,11 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	}
 
 	function addURL(url, net){
+		if(url == settings.myURL){
+			console.error("Attempted add me to myself.");
+			throw "URL Error";
+		}
+		
 		url = urlNormalise(url);
 		
 		if(settings.nets.indexOf(net) === -1) throw "Not a known network (" + net + ")";
