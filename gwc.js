@@ -379,7 +379,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				}
 	
 				if(stats.nets[net] == undefined) stats.nets[net] = 1;
-				else stats.nets[anet]++;
+				else stats.nets[net]++;
 			}
 
 			if(toreturn.length == 0){
