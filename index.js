@@ -7,6 +7,7 @@
  * Implement spec xml?
  * Implement udp gwc.
  * Remove underscore dependancy
+ * Extend stats (uptime not including restarts, total requests)
  */
 
 console.log("node.js verion: " + process.version);
