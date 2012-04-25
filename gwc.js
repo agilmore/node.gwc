@@ -195,8 +195,17 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		if(ip.search("^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}$") == -1) throw "IP invalid (" + ip + ")";
 		if(settings.nets.indexOf(net) == -1) throw "Not a known network (" + net + ")";
 			
-		if(!ip_store[net].exists(ip, _fix_length_queue_entry_exists)){
+		if(!ip_store[net].exists(ip, function(e, o){
+			return e[0].substr(0, e[0].indexOf(':')) == o.substr(0, o.indexOf(':'));
+		})){
+			//check connectable
+			
 			ip_store[net].push([ip, getDateSeconds()]);
+			
+			setTimeout(addIP, ((1000*60*60*24) + (1000*60*10)), ip, net);
+		}
+		else{
+			
 		}
 	}
 
