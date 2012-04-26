@@ -123,8 +123,9 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 
 	function getNet(args){
 		if(args.net != undefined){
-			if(settings.nets.indexOf(args.net) != -1){
-				return args.net;
+			var net = args.net.toLowerCase();
+			if(settings.nets.indexOf(net) != -1){
+				return net;
 			}
 			else{
 				return false;
@@ -185,7 +186,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			//console.dir(url_store[net].get(url, _fix_length_queue_entry_exists));
 			if(getDateSeconds() - url_store[net].get(url, _fix_length_queue_entry_exists)[1] > (60*60*24)){
 				url_store[net].remove(url, _fix_length_queue_entry_exists);
-				process.nextTick(function(){addURL(url, net);});
+				process.nextTick(function(){ addURL(url, net); });
 			}
 		}
 	}
@@ -194,18 +195,30 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		ip = ip.toString();
 		if(ip.search("^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}$") == -1) throw "IP invalid (" + ip + ")";
 		if(settings.nets.indexOf(net) == -1) throw "Not a known network (" + net + ")";
-			
-		if(!ip_store[net].exists(ip, function(e, o){
+
+		var _compare_ip_only = function(e, o){
 			return e[0].substr(0, e[0].indexOf(':')) == o.substr(0, o.indexOf(':'));
-		})){
-			//check connectable
-			
-			ip_store[net].push([ip, getDateSeconds()]);
-			
-			setTimeout(addIP, ((1000*60*60*24) + (1000*60*10)), ip, net);
+		};
+		
+		if(!ip_store[net].exists(ip, _compare_ip_only)){
+			var parts = ip.split(':');
+			var client = require('net').connect(parts[1], parts[0], function(){
+				console.log('Reverse connect to ' + ip + ' successful');
+				client.end();
+				
+				ip_store[net].push([ip, getDateSeconds()]);
+				
+				setTimeout(addIP, 1000*60*61, ip, net);
+			});
+			client.on('error', function(){
+				console.error('Reverse connect to ' + ip + ' failed');
+			});
 		}
 		else{
-			
+			if(getDateSeconds() - ip_store[net].get(ip, _compare_ip_only)[1] > (60*60)){
+				ip_store[net].remove(ip, _compare_ip_only);
+				process.nextTick(function(){ addIP(ip, net); });
+			}
 		}
 	}
 
@@ -214,6 +227,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		s += "<html>\n";
 		s += "<head>\n";
 		s += "<title>" + software.name + ' ' + software.version + "</title>\n";
+		s += "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">"
 		s += "</head>\n";
 		s += "<body>\n";
 		s += "<h1>" + software.name + ' ' + software.version + "</h1>\n";
@@ -229,6 +243,18 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 		}
 		s += "<dd>" + maxi + "</dd>";
+		
+		s += "<dt>Most Popular Client:</dt><dd><ul>";
+		for(var c in stats.clients){
+			var count = 0;
+			for(var d in stats.clients[c]){
+				count += stats.clients[c][d];
+			}
+			s += "<li>" + c + ": " + count + "</li>";
+		}
+		s += "</ul></dt>";
+		
+		s += "</dl>";
 		s += "<pre>Uptime: " + process.uptime().toFixed(2) + "s\n";
 		s += "Memory Usage: " + (process.memoryUsage())['rss'] / 1024 / 1024 + "MB\n";
 		s += "</pre>";
@@ -263,7 +289,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			var toreturn = [];
 			var args = $url.parse(req.url, true).query;
 			if(args == undefined || $_.isEmpty(args)){
-				res.writeHead(200, {'Content-Type': 'text/html'});
+				res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
 				res.end(indexPage(this.ping().software));
 				return;
 			}
