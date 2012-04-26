@@ -337,6 +337,19 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 					}
 				}
 	
+				if(args.forcecheck != undefined){
+					if(args.forcecheck == 'ip'){
+						for(var n in ip_store){
+							for(var i in ip_store[n].getArray()){
+								try{
+									addIP(ip_store[n].getArray()[i][0], n);
+								}
+								catch(e){}
+							}
+						}
+					}
+				}
+	
 				if(args.debug != undefined && args.debug == 'full'){
 					var util = require('util');
 					res.write("=================DEBUG=================\n");
