@@ -348,6 +348,16 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 							}
 						}
 					}
+					if(args.forcecheck == 'url'){
+						for(var n in url_store){
+							for(var i in url_store[n].getArray()){
+								try{
+									addURL(url_store[n].getArray()[i][0], n);
+								}
+								catch(e){}
+							}
+						}
+					}
 				}
 	
 				if(args.debug != undefined && args.debug == 'full'){
