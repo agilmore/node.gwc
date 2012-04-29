@@ -40,6 +40,9 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 		if($_.isObject(settings_temp)){
 			$_.extend(settings, settings_temp);
 		}
+		
+		delete settings_json;
+		delete settings_temp;
 	}
 	catch(e){}
 	
@@ -48,18 +51,6 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	for(n in settings.nets){
 		ip_store[settings.nets[n]] = new FixedLengthQueue(30);
 		url_store[settings.nets[n]] = new FixedLengthQueue(15);
-	}
-	
-	//TODO don't add is serialized urls are to be added below.
-	if('defaultURLs' in settings){
-		for(var net in settings['defaultURLs']){
-			for(var i in settings['defaultURLs'][net]){
-				try{
-					addURL(settings['defaultURLs'][net][i], net);
-				}
-				catch(e){console.error(e);}
-			}
-		}
 	}
 	
 	//load saved data
@@ -71,6 +62,9 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				ip_store[n].fromJSON(ip_store_temp[n]);
 			}
 		}
+
+		delete ip_store_json;
+		delete ip_store_temp;
 	}
 	catch(e){console.error(e);}
 	try{
@@ -81,9 +75,25 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				url_store[net].fromJSON(url_store_temp[net]);
 			}
 		}
+		
+		delete url_store_json;
+		delete url_store_temp
 	}
 	catch(e){console.error(e);}
-	
+
+	if('defaultURLs' in settings){
+		for(var net in settings['defaultURLs']){
+			if(url_store[net].length == 0){
+				for(var i in settings['defaultURLs'][net]){
+					try{
+						addURL(settings['defaultURLs'][net][i], net);
+					}
+					catch(e){console.error(e);}
+				}
+			}
+		}
+	}
+
 	//On exit...
 	process.on('exit', function(){
 		var ip_store_f = $fs.openSync('data/ip_store.json', 'w+');
@@ -243,7 +253,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 		}
 		s += "<dd>" + maxi + "</dd>";
-		
+		/*
 		s += "<dt>Most Popular Client:</dt><dd><ul>";
 		for(var c in stats.clients){
 			var count = 0;
@@ -253,7 +263,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			s += "<li>" + c + ": " + count + "</li>";
 		}
 		s += "</ul></dt>";
-		
+		*/
 		s += "</dl>";
 		s += "<pre>Uptime: " + process.uptime().toFixed(2) + "s\n";
 		s += "Memory Usage: " + (process.memoryUsage())['rss'] / 1024 / 1024 + "MB\n";
@@ -429,6 +439,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 				/*
 				 * Stats
 				 */
+				/*
 				if(args.client != undefined){
 					if(stats.clients[args.client] == undefined) stats.clients[args.client] = {};
 		
@@ -441,6 +452,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 						else stats.clients[args.client]["NONE"]++;
 					}
 				}
+				*/
 	
 				if(stats.nets[net] == undefined) stats.nets[net] = 1;
 				else stats.nets[net]++;
