@@ -355,12 +355,31 @@ GnutellaMessage.getTypeString = function(type){
 	
 }
 
-/*
+
 var udp_sock = require('dgram').createSocket('udp4', function(msg, rinfo){
 	console.log(rinfo);
 	try{
 		var gmes = GnutellaMessage.decode(msg);
 		console.log(gmes.toString());
+		
+		var ggep_blocks = gmessage.getGGEPBlocks();
+		for(var i in ggep_blocks){
+			switch(ggep_blocks[i].id){
+				case 'SCP':
+					if('body' in ggep_blocks[i]){
+						if(ggep_blocks[i].body[0] == 1){
+							console.log("Wants Ultrapeers");
+						}
+						else{
+							console.log("Wants Leafs");
+						}
+					}
+					else{
+						console.log("Wants Leafs");
+					}
+					break;
+			}
+		}
 		
 		var pong = new GnutellaMessage(
 			gmes.getGUID(),
@@ -368,14 +387,22 @@ var udp_sock = require('dgram').createSocket('udp4', function(msg, rinfo){
 			new Buffer([57, 5, 127, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 		);
 		
+		var udphc = {id: 'UDPHC', compression: false, body: new Buffer("gil.homelinux.net")};
+		pong.addGGEPBlock(udphc);
+		
+		var ipp = {id: 'IPP', compression: false, body: new Buffer([1,3,3,7,57,5])};
+		pong.addGGEPBlock(ipp);
+		
 		var pong_buf = GnutellaMessage.encode(pong);
-		console.log(pong_buf);
-		//udp_sock.send(pong_buf, 0, pong_buf.length, rinfo.port, rinfo.address, [callback]);
+		//console.log(pong_buf);
+		udp_sock.send(pong_buf, 0, pong_buf.length, rinfo.port, rinfo.address);
 	}
-	catch(e){}
+	catch(e){
+		console.error(e);
+	}
 });
 udp_sock.bind(1337);
-*/
+
 
 console.log(sample_buffer);
 var gmessage = GnutellaMessage.decode(sample_buffer);
@@ -402,4 +429,32 @@ catch(e){
 	console.log("Failed at: " + e);
 	console.log(sample_buffer.slice(e-2));
 	console.log(new_buffer.slice(e-2));
+}
+
+//console.log(gmessage);
+var ggep_blocks = gmessage.getGGEPBlocks();
+for(var i in ggep_blocks){
+	switch(ggep_blocks[i].id){
+		case 'UDPHC':
+			console.log('UDPHC: ' + ggep_blocks[i].body.toString());
+			break;
+		case 'IPP':
+			console.log('IPP: ');
+			for(var b = 0; b < ggep_blocks[i].body.length; ){
+				var ip = 	ggep_blocks[i].body.readUInt8(b) + "." + 
+							ggep_blocks[i].body.readUInt8(b++) + "." + 
+							ggep_blocks[i].body.readUInt8(b++) + "." + 
+							ggep_blocks[i].body.readUInt8(b++);
+				var port = ggep_blocks[i].body.readUInt16LE(b++);
+				b++;
+				console.log("\t" + ip + ':' + port);
+			}
+			break;
+		case 'PHC':
+			require('zlib').gunzip(ggep_blocks[i].body, function(error, result){
+				console.log('PHC: ');
+				console.log(result.toString())
+			});
+			break;
+	}
 }
