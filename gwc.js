@@ -1,11 +1,14 @@
-module.exports = GWC = (function($_, $url, $http, $fs){
+module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 	
 	NAME = 'node.gwc';
 	VERSION = '0.1';
 	
 	var settings = {
 		nets: ["gnutella", "gnutella2"],
-		myURL: 'http://gwctest.zapto.org:1337/',
+		myDomain: 'gwctest.zapto.org',
+		myPort: 1337,
+		myIP: '127.0.0.1',
+		//myURL: 'http://gwctest.zapto.org:1337/',
 		defaultNet: "gnutella2",
 		defaultURLs: {
 			"gnutella" : [
@@ -152,7 +155,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	}
 
 	function addURL(url, net){
-		if(url == settings.myURL){
+		if(url == 'http://' + settings.myDomain + ':' + settings.myPort + '/'){
 			console.error("Attempted add me to myself.");
 			throw "URL Error";
 		}
@@ -278,7 +281,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 	}
 
 	return {
-		route: function(req, res){
+		routeHTTP: function(req, res){
 
 			//nonsense: sometimes remoteAddress is undefined!
 			var remote_ip = null;
@@ -469,6 +472,74 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 
 			res.end(r);
 		},
+		
+		routeUDP: function(gmessage, rinfo){
+			//console.log(gmessage.toString());
+			//console.log(rinfo);
+			console.log(rinfo.address + " [" + (new Date()).toISOString() + "] " + GnutellaMessage.getTypeString(gmessage.getType()) + " UHC");
+			
+			if(gmessage.getType() == GnutellaMessage.TYPES.PING){
+				var want_ultrapeers = false;
+				
+				var ggep_blocks = gmessage.getGGEPBlocks();
+				for(var i in ggep_blocks){
+					switch(ggep_blocks[i].id){
+						case 'SCP':
+							if('body' in ggep_blocks[i]){
+								want_ultrapeers = (ggep_blocks[i].body[0] == 1);
+							}
+							break;
+					}
+				}
+				
+				//[57, 5, 127, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+				var pong_body_buffer = new Buffer(14);
+				var i = 0;
+				
+				pong_body_buffer.writeUInt16LE(settings.myPort, i);
+				i += 2;
+				
+				var ip_parts = settings.myIP.split('.');
+				pong_body_buffer.writeUInt8(parseInt(ip_parts[0]), i++);
+				pong_body_buffer.writeUInt8(parseInt(ip_parts[1]), i++);
+				pong_body_buffer.writeUInt8(parseInt(ip_parts[2]), i++);
+				pong_body_buffer.writeUInt8(parseInt(ip_parts[3]), i++);
+				
+				var pong = new GnutellaMessage(
+					gmessage.getGUID(),
+					GnutellaMessage.TYPES.PONG,
+					pong_body_buffer
+				);
+				
+				var udphc = {id: 'UDPHC', compression: false, body: new Buffer(settings.myDomain)};
+				pong.addGGEPBlock(udphc);
+				
+				var phc = {id: 'PHC', compression: false, body: new Buffer('yin.cloud.bishopston.net:33558')};
+				pong.addGGEPBlock(phc);
+				
+				if(want_ultrapeers){
+					var ips = ip_store['gnutella'].getArray();
+					if(ips.length > 0){
+						var ipp_buffer = new Buffer(ips.length * 6);
+						for(var i in ips){
+							var ipport = GnutellaMessage.encodeIPPort(ips[i][0]);
+							if(ipport !== false){
+								ipport.copy(ipp_buffer, (i*6));
+							}
+							delete ipport;
+						}
+						var ipp = {id: 'IPP', compression: false, body: ipp_buffer};
+						pong.addGGEPBlock(ipp);
+					}
+				}
+				else{
+					addIP(rinfo.address + ':' + rinfo.port);
+				}
+				
+				return pong;
+			}
+			return false;
+		},
 
 		update: function(net, ip, url){
 			url = url || null;
@@ -495,7 +566,7 @@ module.exports = GWC = (function($_, $url, $http, $fs){
 			}
 		},
 	};
-}(require('./underscore.js'), require('url'), require('http'), require('fs')));
+}(require('./underscore.js'), require('url'), require('http'), require('fs'), require('./gnutella_message.js')));
 
 function FixedLengthQueue(len){
 	var queue = [];
