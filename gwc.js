@@ -136,7 +136,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 
 	function getNet(args){
 		if(args.net != undefined){
-			var net = args.net.toLowerCase();
+			var net = new String(args.net).toLowerCase();
 			if(settings.nets.indexOf(net) != -1){
 				return net;
 			}
