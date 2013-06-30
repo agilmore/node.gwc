@@ -12,28 +12,18 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 		defaultNet: "gnutella2",
 		defaultURLs: {
 			"gnutella" : [
-				"http://www.5s7.com/g12cache/skulls.php",
-				"http://gwebcache.ns1.net/",
-				"http://gwc.marksieklucki.com/skulls.php",
-				"http://www.ak-electron.eu/Beacon2/gwc.php",
-				"http://beacon.numberzero.org/gwc.php",
+			              "http://g1.uk.dyslexicfish.net:33558/",
+			              "http://g1.uswest.dyslexicfish.net:33558/"
 			],
 			"gnutella2" : [
-				"http://htmlhell.com/",
-				"http://gwc2.wodi.org/skulls.php",
-				"http://cache.trillinux.org/g2/bazooka.php",
-				"http://silvers.zyns.com/gwc/dkac.php",
-				"http://dkac.trillinux.org/dkac/dkac.php",
-				"http://gwc.marksieklucki.com/skulls.php",
-				"http://gwc.dyndns.info:28960/gwc.php",
-				"http://cache3.leite.us/",
-				"http://gwebcache.ns1.net/",
-				"http://cache5.leite.us/",
-				"http://cache.ce3c.be/",
-				"http://cache2.leite.us/",
-				"http://karma.cloud.bishopston.net:33559/",
-				"http://gwc.marksieklucki.com/skulls.php",
-				"http://www.ak-electron.eu/Beacon2/gwc.php",     
+			               "http://dkac.trillinux.org/dkac/dkac.php",
+			               "http://gwc.dyndns.info:28960/gwc.php",
+			               "http://cache.ce3c.be/",
+			               "http://cache2.bazookanetworks.com/g2/bazooka.php",
+			               "http://htmlhell.com/",
+			               "http://gweb.dwbo.nl/",
+			               "http://cache.w3-hidden.cc/",
+			               "http://www.omhub.ru/mibew/view/",
 			]
 		}
 	};
@@ -80,7 +70,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 		}
 		
 		delete url_store_json;
-		delete url_store_temp
+		delete url_store_temp;
 	}
 	catch(e){console.error(e);}
 
@@ -100,13 +90,13 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 	//On exit...
 	process.on('exit', function(){
 		var ip_store_f = $fs.openSync('data/ip_store.json', 'w+');
-		var w = $fs.writeSync(ip_store_f, JSON.stringify(ip_store));
+		$fs.writeSync(ip_store_f, JSON.stringify(ip_store));
 		
 		var url_store_f = $fs.openSync('data/url_store.json', 'w+');
-		var w = $fs.writeSync(url_store_f, JSON.stringify(url_store));
+		$fs.writeSync(url_store_f, JSON.stringify(url_store));
 		
 		var settings_f = $fs.openSync('settings.json', 'w+');
-		var w = $fs.writeSync(settings_f, JSON.stringify(settings));
+		$fs.writeSync(settings_f, JSON.stringify(settings));
 		
 		console.log("exiting...");
 	});
@@ -127,6 +117,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 	
 	function urlNormalise(url){
 		//url = url.toLowerCase();
+		url = url.trim();
 		var indexRegex = new RegExp("index\.[a-z]{2,3}$");
 		if(indexRegex.test(url)){
 			url = url.substring(0, indexRegex.exec(url).index);
@@ -155,12 +146,12 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 	}
 
 	function addURL(url, net){
+		url = urlNormalise(url);
+		
 		if(url == 'http://' + settings.myDomain + ':' + settings.myPort + '/'){
 			console.error("Attempted add me to myself.");
 			throw "URL Error";
 		}
-		
-		url = urlNormalise(url);
 		
 		if(settings.nets.indexOf(net) === -1) throw "Not a known network (" + net + ")";
 
@@ -240,7 +231,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 		s += "<html>\n";
 		s += "<head>\n";
 		s += "<title>" + software.name + ' ' + software.version + "</title>\n";
-		s += "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">"
+		s += "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">";
 		s += "</head>\n";
 		s += "<body>\n";
 		s += "<h1>" + software.name + ' ' + software.version + "</h1>\n";
@@ -299,7 +290,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 
 			console.log(remote_ip + " [" + (new Date()).toISOString() + "] " + req.method + " " + req.url + " HTTP/" + req.httpVersion);
 
-			var toreturn = [];
+			var toreturn = new Array();
 			var args = $url.parse(req.url, true).query;
 			if(args == undefined || $_.isEmpty(args)){
 				res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
@@ -335,7 +326,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 				if(args.pollute != undefined){
 					var pollute_n = args.pullute ? parseInt(args.pullute) : 5;
 					var ran_ip = function(){
-						var parts = [];
+						var parts = new Array();
 						for(var i = 0; i < pollute_n; i++){
 							parts.push(Math.floor(Math.random() * 255) + 1);
 						}
@@ -427,10 +418,10 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 				if(args.get != undefined){
 					try{
 						var data = this.get(net, remote_ip);
-						for(i in data.hosts){
+						for(var i in data.hosts){
 							toreturn.push(["H", data.hosts[i][0], getDateSeconds() - data.hosts[i][1]]);
 						}
-						for(i in data.urls){
+						for(var i in data.urls){
 							toreturn.push(["U", data.urls[i][0], getDateSeconds() - data.urls[i][1]]);
 						}
 					}
@@ -466,7 +457,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 			}
 
 			var r = "";
-			for(i in toreturn){
+			for(var i in toreturn){
 				r += toreturn[i].join("|") + "\n";
 			}
 
@@ -563,7 +554,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 			return {
 				software: {'name':'node.gwc', 'version':'0.1'},
 				networks: settings.nets
-			}
+			};
 		},
 	};
 }(require('./underscore.js'), require('url'), require('http'), require('fs'), require('./gnutella_message.js')));
@@ -576,42 +567,42 @@ function FixedLengthQueue(len){
 			queue = queue.slice(1, len);
 		}
 		queue.push(o);
-	}
+	};
 	
 	this.get = function(o, compareFunc){
 		if(compareFunc == undefined){
 			compareFunc = function(e, o){
 				return e == o;
-			}
+			};
 		}
 		return (queue.filter(function(e){ return compareFunc(e, o); }))[0];
-	}
+	};
 
 	this.exists = function(o, compareFunc){
 		if(compareFunc == undefined){
 			compareFunc = function(e, o){
 				return e == o;
-			}
+			};
 		}
 		return queue.some(function(e){ return compareFunc(e, o); });
-	}
+	};
 	
 	this.remove = function(o, compareFunc){
 		if(compareFunc == undefined){
 			compareFunc = function(e, o){
 				return e == o;
-			}
+			};
 		}
 		queue = queue.filter(function(v, i){ return !compareFunc(v, o); });
-	}
+	};
 	
 	this.getArray = function(){
 		return queue;
-	}
+	};
 
 	this.toJSON = function(){
 		return JSON.stringify(queue);
-	}
+	};
 	
 	this.fromJSON = function(json){
 		var util = require('util');
@@ -619,5 +610,5 @@ function FixedLengthQueue(len){
 		if(util.isArray(temp)){
 			queue = temp;
 		}
-	}
+	};
 }
