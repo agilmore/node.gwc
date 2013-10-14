@@ -1,4 +1,4 @@
-module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
+module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
   
   NAME = 'node.gwc';
   VERSION = '0.1';
@@ -88,7 +88,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
   }
 
   //On exit...
-  process.on('exit', function(){
+  process.on('exit', function onExit(){
     var ip_store_f = $fs.openSync('data/ip_store.json', 'w+');
     $fs.writeSync(ip_store_f, JSON.stringify(ip_store));
     
@@ -164,9 +164,9 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
     }
 
     if(!url_store[net].exists(url, _fix_length_queue_entry_exists)){
-      var req = $http.get(options, function(res) {
-        res.on('data', function (chunk) {
-          if(  chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
+      var req = $http.get(options, function http_get_listener(res) {
+        res.on('data', function http_res_data_listener(chunk) {
+          if(chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
             chunk.toString().toLowerCase().indexOf('pong') === 0
           ){
             url_store[net].push([url, getDateSeconds()]);
@@ -178,11 +178,11 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
             console.error("URL: Returned error (" + url + ")");
             console.error(chunk.toString().toLowerCase());
           }
-        }).on('error', function(error){
+        }).on('error', function http_res_error_listener(error){
           console.error("URL: " + url + " FAILED: " + error.message);
         });
       });
-      req.on('error', function(error){
+      req.on('error', function http_req_error_listener(error){
         console.error("URL: " + url + " FAILED: " + error.message);
       });
     }
@@ -190,7 +190,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
       //console.dir(url_store[net].get(url, _fix_length_queue_entry_exists));
       if(getDateSeconds() - url_store[net].get(url, _fix_length_queue_entry_exists)[1] > (60*60*24)){
         url_store[net].remove(url, _fix_length_queue_entry_exists);
-        process.nextTick(function(){ addURL(url, net); });
+        process.nextTick(function deferred_addURL(){ addURL(url, net); });
       }
     }
   }
@@ -207,7 +207,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
     if(ip.search("^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}$") == -1) throw "IP invalid (" + ip + ")";
     if(settings.nets.indexOf(net) == -1) throw "Not a known network (" + net + ")";
 
-    var _compare_ip_only = function(e, o){
+    var _compare_ip_only = function _compare_ip_only(e, o){
       return e[0].substr(0, e[0].indexOf(':')) == o.substr(0, o.indexOf(':'));
     };
     
@@ -216,7 +216,7 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
     		ip_store[net].push([ip, getDateSeconds()]);
     	}
       var parts = ip.split(':');
-      var client = require('net').connect(parts[1], parts[0], function(){
+      var client = require('net').connect(parts[1], parts[0], function addIP_connect_listener(){
         console.log('Reverse connect to ' + ip + ' successful');
         client.end();
         
@@ -224,20 +224,20 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
         
         setTimeout(addIP, 1000*60*61, ip, net);
       });
-      client.on('error', function(){
+      client.on('error', function addIP_error_listener(){
         console.error('Reverse connect to ' + ip + ' failed');
       });
     }
     else{
       if(getDateSeconds() - ip_store[net].get(ip, _compare_ip_only)[1] > (60*60)){
         ip_store[net].remove(ip, _compare_ip_only);
-        process.nextTick(function(){ addIP(ip, net); });
+        process.nextTick(function deferred_addIP(){ addIP(ip, net); });
       }
     }
   }
 
   function indexPage(){
-  	var timeSince = function(date) {
+  	var timeSince = function timeSince(date) {
 	    var seconds = Math.floor((new Date() - date) / 1000);
 
 	    var interval = Math.floor(seconds / 31536000);
@@ -378,7 +378,6 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
   
         if(args.pollute != undefined){
           var pollute_n = args.pollute ? parseInt(args.pollute) : 5;
-          console.log(pollute_n);
           var ran_ip = function(){
             var parts = new Array();
             for(var i = 0; i < 4; i++){
@@ -621,6 +620,10 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
 
 function FixedLengthQueue(len){
   var queue = [];
+  
+  var simpleEqualityCampare = function simpleEqualityCampare(e, o){
+    return e == o;
+  };
 
   this.push = function(o){
     if(queue.length > len){
@@ -631,29 +634,23 @@ function FixedLengthQueue(len){
   
   this.get = function(o, compareFunc){
     if(compareFunc == undefined){
-      compareFunc = function(e, o){
-        return e == o;
-      };
+      compareFunc = simpleEqualityCampare;
     }
-    return (queue.filter(function(e){ return compareFunc(e, o); }))[0];
+    return (queue.filter(function FixedLengthQueue_get_compare_wrapper(e){ return compareFunc(e, o); }))[0];
   };
 
   this.exists = function(o, compareFunc){
     if(compareFunc == undefined){
-      compareFunc = function(e, o){
-        return e == o;
-      };
+      compareFunc = simpleEqualityCampare;
     }
-    return queue.some(function(e){ return compareFunc(e, o); });
+    return queue.some(function FixedLengthQueue_exists_compare_wrapper(e){ return compareFunc(e, o); });
   };
   
   this.remove = function(o, compareFunc){
     if(compareFunc == undefined){
-      compareFunc = function(e, o){
-        return e == o;
-      };
+      compareFunc = simpleEqualityCampare;
     }
-    queue = queue.filter(function(v, i){ return !compareFunc(v, o); });
+    queue = queue.filter(function FixedLengthQueue_remove_compare_wrapper(v, i){ return !compareFunc(v, o); });
   };
   
   this.getArray = function(){
@@ -672,7 +669,7 @@ function FixedLengthQueue(len){
     }
   };
   
-  this.__defineGetter__("length", function(){
+  this.__defineGetter__("length", function FixedLengthQueue_length(){
     return queue.length;
 	});
 }
