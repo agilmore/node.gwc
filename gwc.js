@@ -334,7 +334,6 @@ module.exports = (function($_, $url, $http, $fs, GnutellaMessage){
       if(!remote_ip){
         console.error("Undefined IP");
         console.dir(req);
-        console.dir(e);
         return;
       }
 
