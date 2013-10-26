@@ -1,14 +1,16 @@
 module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
+
+  var NAME = 'node.gwc',
+      VERSION = '0.1';
   
-  NAME = 'node.gwc';
-  VERSION = '0.1';
+  var REGEX_INDEX_DOT = new RegExp("index\.[a-z]{2,3}$");
+  var REGEX_KNOWN_FILE_EXTS_WITH_SLASH = new RegExp("\.(php|pl)/$");
   
   var settings = {
     nets: ["gnutella", "gnutella2"],
     myDomain: 'gwctest.zapto.org',
     myPort: 1337,
     myIP: '127.0.0.1',
-    //myURL: 'http://gwctest.zapto.org:1337/',
     defaultNet: "gnutella2",
     defaultURLs: {
       "gnutella" : [
@@ -34,8 +36,8 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
       $_.extend(settings, settings_temp);
     }
     
-    delete settings_json;
-    delete settings_temp;
+    settings_json = null;
+    settings_temp = null;
   }
   catch(e){}
   
@@ -56,8 +58,8 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
       }
     }
 
-    delete ip_store_json;
-    delete ip_store_temp;
+    ip_store_json = null;
+    ip_store_temp = null;
   }
   catch(e){console.error(e);}
   try{
@@ -69,8 +71,8 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
       }
     }
     
-    delete url_store_json;
-    delete url_store_temp;
+    url_store_json = null;
+    url_store_temp = null;
   }
   catch(e){console.error(e);}
 
@@ -116,13 +118,15 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
   };
   
   function urlNormalise(url){
-    //url = url.toLowerCase();
-    url = url.trim();
-    var indexRegex = new RegExp("index\.[a-z]{2,3}$");
-    if(indexRegex.test(url)){
-      url = url.substring(0, indexRegex.exec(url).index);
+  	var parts = $url.parse(url.trim());
+    if(REGEX_INDEX_DOT.test(parts.pathname)){
+    	parts.pathname = parts.pathname.substring(0, REGEX_INDEX_DOT.exec(parts.pathname).index);
     }
-    return url;
+
+    if(REGEX_KNOWN_FILE_EXTS_WITH_SLASH.test(parts.pathname)){
+    	parts.pathname = parts.pathname.slice(0, -1);
+    }
+    return $url.format(parts);
   }
 
   function getNet(args){
@@ -155,15 +159,14 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
     
     if(settings.nets.indexOf(net) === -1) throw "Not a known network (" + net + ")";
 
-    var options = $url.parse(url + '?ping=1&multi=1&client=NGWC&version=0.1&cache=1&net=' + net);
-    $_.extend(options, {
-      headers: {'User-Agent': 'node.gwc'}
-    });
-    if(!('path' in options)){
-      options.path = options.pathname + options.search;
-    }
-
     if(!url_store[net].exists(url, _fix_length_queue_entry_exists)){
+      var options = $url.parse(url + '?ping=1&multi=1&client=NGWC&version=0.1&cache=1&net=' + net);
+      $_.extend(options, {
+        headers: {'User-Agent': 'node.gwc'}
+      });
+      if(!('path' in options)){
+        options.path = options.pathname + options.search;
+      }
       var req = $http.get(options, function http_get_listener(res) {
         res.on('data', function http_res_data_listener(chunk) {
           if(chunk.toString().toLowerCase().indexOf('i|pong') === 0 ||
@@ -397,9 +400,11 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
         if(args.forcecheck != undefined){
           if(args.forcecheck == 'ip'){
             for(var n in ip_store){
-              for(var i in ip_store[n].getArray()){
+            	var ips = ip_store[n].getArray();
+            	ip_store[n].truncate();
+              for(var i in ips){
                 try{
-                  addIP(ip_store[n].getArray()[i][0], n);
+                  addIP(ips[i][0], n);
                 }
                 catch(e){}
               }
@@ -407,9 +412,11 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
           }
           if(args.forcecheck == 'url'){
             for(var n in url_store){
-              for(var i in url_store[n].getArray()){
+            	var urls = url_store[n].getArray();
+            	url_store[n].truncate();
+              for(var i in urls){
                 try{
-                  addURL(url_store[n].getArray()[i][0], n);
+                  addURL(urls[i][0], n);
                 }
                 catch(e){}
               }
@@ -621,7 +628,7 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
 function FixedLengthQueue(len){
   var queue = [];
   
-  var simpleEqualityCampare = function simpleEqualityCampare(e, o){
+  var simpleEqualityCompare = function simpleEqualityCompare(e, o){
     return e == o;
   };
 
@@ -634,23 +641,27 @@ function FixedLengthQueue(len){
   
   this.get = function(o, compareFunc){
     if(compareFunc == undefined){
-      compareFunc = simpleEqualityCampare;
+      compareFunc = simpleEqualityCompare;
     }
     return (queue.filter(function FixedLengthQueue_get_compare_wrapper(e){ return compareFunc(e, o); }))[0];
   };
 
   this.exists = function(o, compareFunc){
     if(compareFunc == undefined){
-      compareFunc = simpleEqualityCampare;
+      compareFunc = simpleEqualityCompare;
     }
     return queue.some(function FixedLengthQueue_exists_compare_wrapper(e){ return compareFunc(e, o); });
   };
   
   this.remove = function(o, compareFunc){
     if(compareFunc == undefined){
-      compareFunc = simpleEqualityCampare;
+      compareFunc = simpleEqualityCompare;
     }
     queue = queue.filter(function FixedLengthQueue_remove_compare_wrapper(v, i){ return !compareFunc(v, o); });
+  };
+  
+  this.truncate = function(){
+  	queue = [];
   };
   
   this.getArray = function(){
@@ -663,7 +674,7 @@ function FixedLengthQueue(len){
   
   this.fromJSON = function(json){
     var util = require('util');
-    temp = JSON.parse(json);
+    var temp = JSON.parse(json);
     if(util.isArray(temp)){
       queue = temp;
     }
