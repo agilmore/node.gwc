@@ -335,9 +335,7 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
       }
       catch(e){}
       if(!remote_ip){
-        console.error("Undefined IP");
-        console.dir(req);
-        res.writeHead(500, {'Content-Type': 'text/plain'});
+        res.writeHead(500, {'Content-Type': 'text/plain; charset=utf-8'});
         res.end("I|WARNING|Server Error");
         return;
       }
@@ -349,11 +347,11 @@ module.exports = (function gwc($_, $url, $http, $fs, GnutellaMessage){
       var toreturn = new Array();
       var args = $url.parse(req.url, true).query;
       if(args == undefined || $_.isEmpty(args)){
-        res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
-        res.end(indexPage(this.ping().software));
+        res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+        res.end(indexPage());
         return;
       }
-      res.writeHead(200, {'Content-Type': 'text/plain'});
+      res.writeHead(200, {'Content-Type': 'text/plain; charset=utf-8'});
 
       var net = getNet(args);
       if(net === false){
