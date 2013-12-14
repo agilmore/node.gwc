@@ -19,15 +19,24 @@ console.log('Current directory: ' + process.cwd());
 
 process.on('uncaughtException', function(err) {
   console.dir(err);
-  process.exit(1);
+  process.abort();
 });
 
 var memwatch = require('memwatch');
 var heapdump = require('heapdump');
+var diff = null;
 
 memwatch.on('leak', function(info) {
+	console.error("Memory leak detected:");
 	console.error(info.reason);
-	console.error(info.growth);
+	console.error("Growth: " + info.growth);
+	if(diff === null) {
+		diff = new memwatch.HeapDiff();
+	}
+	else{
+		console.dir(diff.end());
+		diff = new memwatch.HeapDiff();
+	}
 	heapdump.writeSnapshot('/tmp/node.gwc.' + Date.now() + '.heapsnapshot');
 });
 
