@@ -34,7 +34,17 @@ memwatch.on('leak', function(info) {
 		diff = new memwatch.HeapDiff();
 	}
 	else{
-		console.dir(diff.end());
+		var report = diff.end();
+		console.error("Memory change by " + report.change.size);
+		if(report.change.size_bytes > 0){
+			console.error("Before: " + report.before.time + " - " + report.before.size);
+			console.error("After: " + report.after.time + " - " + report.after.size);
+			console.error("Allocated/Freed: " + report.change.allocated_nodes + "/" + report.change.freed_nodes);
+			console.error("Details");
+			for(var i in report.change.details) {
+				console.dir(report.change.details[i]);
+			}
+		}
 		diff = new memwatch.HeapDiff();
 	}
 	heapdump.writeSnapshot('/tmp/node.gwc.' + Date.now() + '.heapsnapshot');
